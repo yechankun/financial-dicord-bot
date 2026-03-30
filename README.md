@@ -89,4 +89,5 @@ Each invocation creates a timestamped directory under `runs/` that contains:
 - The output schema is defined in [schemas/report-output.schema.json](/Users/yechankun/Code/bots/financial-dicord-bot/schemas/report-output.schema.json).
 - If you want more user-facing skills later, add them to [src/allowedSkills.js](/Users/yechankun/Code/bots/financial-dicord-bot/src/allowedSkills.js), activate them in [config/active-skills.json](/Users/yechankun/Code/bots/financial-dicord-bot/config/active-skills.json), and restart the bot.
 - Full terms of service draft is in [docs/terms-clause-ko.md](/Users/yechankun/Code/bots/financial-dicord-bot/docs/terms-clause-ko.md).
+- Full privacy policy draft is in [docs/privacy-policy-ko.md](/Users/yechankun/Code/bots/financial-dicord-bot/docs/privacy-policy-ko.md).
 - Report-writing compliance guidance is in [docs/report-compliance-guidelines.md](/Users/yechankun/Code/bots/financial-dicord-bot/docs/report-compliance-guidelines.md).
