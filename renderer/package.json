@@ -1,0 +1,17 @@
+{
+  "name": "druckenmiller-market-research-renderer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "render": "node --import tsx tools/render-pinets.ts",
+    "pinets:config": "node --import tsx tools/manage-pinets.ts"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "pinets": "^0.9.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}

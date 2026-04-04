@@ -1,0 +1,10 @@
+{
+  "skills": [
+    {
+      "name": "druckenmiller-market-research",
+      "mention": "$druckenmiller-market-research",
+      "description": "드러켄밀러 스타일로 거시, 섹터, 후보 자산을 조사해 리포트용 분석 문맥을 만든다냥.",
+      "enabled": true
+    }
+  ]
+}

@@ -1,25 +1,29 @@
-# Financial Discord Bot
+# Financial Bot
 
-Discord bot that runs a file-managed research runtime skill whitelist and posts rendered report PNGs back into a Discord channel.
+Financial bot that currently runs on Discord and can expand to additional channels through `src/channels/` adapters.
 
 ## What It Does
 
 - Exposes a slash command: `/report`
 - Exposes a slash command: `/skills`
-- Restricts user-facing execution to the skills activated in a local whitelist file
-- Runs `research-runtime exec ... --json --sandbox danger-full-access --full-auto`
+- Exposes a slash command: `/benchmark`
+- Restricts user-facing execution to the skills enabled in a local JSON file
+- Runs a low-cost preflight `research-runtime exec` guard first, then runs the main research/report flow only if the question passes
+- Runs `research-runtime exec ... --json --sandbox danger-full-access`
 - Forces the selected research skill plus `$context-report-studio`
 - Expects research runtime to create a local HTML + PNG report bundle
 - Uploads the exported PNG pages back to Discord
+- Persists a benchmark simulation portfolio and trade history in local JSON files
+- Runs an internal benchmark trade-planning pass after report delivery and records simulated fills
+- Queues benchmark work in a single-consumer file-backed queue so only one benchmark worker runs at a time
 
-## Whitelist Model
+## Skill Config Model
 
-Only the administrator edits the whitelist file. Users can only inspect the active list and invoke an active skill.
+Only the administrator edits the skill config file. Users can only inspect the enabled list and invoke an enabled skill.
 
-- The full known skill catalog lives in [src/allowedSkills.js](/Users/yechankun/Code/bots/financial-dicord-bot/src/allowedSkills.js)
-- The active user-facing subset lives in [config/active-skills.json](/Users/yechankun/Code/bots/financial-dicord-bot/config/active-skills.json)
-- Users can inspect the active subset with `/skills`
-- Users call `/report` with a skill name string, and the bot rejects anything not active in the file
+- The user-facing skill catalog, descriptions, mentions, and enabled flags live in [config/skills.json](/Users/yechankun/Code/bots/financial-bot/config/skills.json)
+- Users can inspect the enabled subset with `/skills`
+- Users call `/report` by choosing one of the active skill choices exposed in Discord
 - The bot injects only the validated skill mention into the research runtime prompt
 - `$context-report-studio` is added internally as a required post-processing step
 
@@ -35,7 +39,15 @@ This keeps skill activation as a file-based admin action instead of a Discord co
    - `DISCORD_BOT_TOKEN`
    - `DISCORD_APPLICATION_ID`
    - `DISCORD_GUILD_ID` for guild-scoped command registration during development
-   - Optional: `AI_RUNTIME_MODEL`
+   - Optional: `AI_RUNTIME_MODEL` default `gpt-5.4`
+   - Optional: `AI_RUNTIME_REASONING_EFFORT` default `high`
+   - Optional: `AI_RUNTIME_GUARD_MODEL` default `gpt-5.4-mini` for the lightweight preflight question gate
+   - Optional: `AI_RUNTIME_GUARD_REASONING_EFFORT` default `low`
+   - Optional: `AI_RUNTIME_BENCHMARK_MODEL` default `gpt-5.4` for the benchmark trade-planning pass
+   - Optional: `AI_RUNTIME_BENCHMARK_REASONING_EFFORT` default `high`
+   - Optional: `BENCHMARK_INITIAL_CASH`
+   - Optional: `BENCHMARK_BUY_FEE_RATE`
+   - Optional: `BENCHMARK_SELL_FEE_RATE`
    - Optional: `ALLOWED_DISCORD_USER_IDS`
 3. Make sure `research-runtime` CLI is installed and available in `PATH`, or set `AI_RUNTIME_BIN`.
 4. Start the bot.
@@ -48,30 +60,38 @@ This keeps skill activation as a file-based admin action instead of a Discord co
 ```text
 /skills
 
+/benchmark
+  view: portfolio | history
+
 /report
-  skill: druckenmiller-market-research
+  skill: 드롭다운에서 선택
   question: 미국 AI 인프라와 전력 병목을 10일 바스켓 관점으로 조사해줘
 ```
 
-## Whitelist Editing
+## Skill Editing
 
-Edit [config/active-skills.json](/Users/yechankun/Code/bots/financial-dicord-bot/config/active-skills.json).
+Edit [config/skills.json](/Users/yechankun/Code/bots/financial-bot/config/skills.json).
 
 ```json
 {
-  "user_facing_skills": [
-    "druckenmiller-market-research"
+  "skills": [
+    {
+      "name": "druckenmiller-market-research",
+      "mention": "$druckenmiller-market-research",
+      "description": "드러켄밀러 스타일로 거시, 섹터, 후보 자산을 조사해 리포트용 분석 문맥을 만든다냥.",
+      "enabled": true
+    }
   ]
 }
 ```
 
-Only names present in the catalog file are accepted. After editing the whitelist file, restart the bot so the slash command help text and runtime state stay aligned.
+Only `enabled: true` skills appear in `/skills` and `/report`. After editing the skill file, restart the bot so the slash-command choices refresh.
 
 ## Example
 
 ```text
 /report
-  skill: druckenmiller-market-research
+  skill: 드롭다운에서 선택
   question: 미국 AI 인프라와 전력 병목을 10일 바스켓 관점으로 조사해줘
 ```
 
@@ -79,15 +99,31 @@ Only names present in the catalog file are accepted. After editing the whitelist
 
 Each invocation creates a timestamped directory under `runs/` that contains:
 
+- guard-stage JSONL events and the structured allow/deny result
 - raw research runtime JSONL events
 - the last structured response
 - report artifacts generated by research runtime
 
+The benchmark simulation is stored separately in `benchmark/`:
+
+- `benchmark/portfolio.json`
+- `benchmark/trade-history.json`
+- `benchmark/queue/pending`
+- `benchmark/queue/processing`
+- `benchmark/queue/processed`
+
 ## Important Notes
 
+- The bot first runs a read-only guard step with `AI_RUNTIME_GUARD_MODEL` to reject obviously unrelated or prompt-injection-like questions before the expensive research run starts.
+- The benchmark files are auto-created on first start. If you delete them, the benchmark state starts over from the initial cash setting.
+- The research prompt now includes the current benchmark cash, positions, realized PnL, fees, and today's trade count as internal context.
+- After the report is delivered, the bot runs a read-only benchmark trade-planning step in the background and applies the simulated fills only during New York premarket, regular hours, or afterhours.
+- Benchmark post-processing uses a producer-consumer queue. Reports only enqueue work, and a single worker drains the queue in batches until no pending report remains.
 - The current implementation assumes research runtime can create the report HTML and PNG files inside the provided run directory.
-- The output schema is defined in [schemas/report-output.schema.json](/Users/yechankun/Code/bots/financial-dicord-bot/schemas/report-output.schema.json).
-- If you want more user-facing skills later, add them to [src/allowedSkills.js](/Users/yechankun/Code/bots/financial-dicord-bot/src/allowedSkills.js), activate them in [config/active-skills.json](/Users/yechankun/Code/bots/financial-dicord-bot/config/active-skills.json), and restart the bot.
-- Full terms of service draft is in [docs/terms-clause-ko.md](/Users/yechankun/Code/bots/financial-dicord-bot/docs/terms-clause-ko.md).
-- Full privacy policy draft is in [docs/privacy-policy-ko.md](/Users/yechankun/Code/bots/financial-dicord-bot/docs/privacy-policy-ko.md).
-- Report-writing compliance guidance is in [docs/report-compliance-guidelines.md](/Users/yechankun/Code/bots/financial-dicord-bot/docs/report-compliance-guidelines.md).
+- The preflight guard schema is defined in [schemas/question-guard.schema.json](/Users/yechankun/Code/bots/financial-bot/schemas/question-guard.schema.json).
+- The benchmark trade schema is defined in [schemas/benchmark-actions.schema.json](/Users/yechankun/Code/bots/financial-bot/schemas/benchmark-actions.schema.json).
+- The output schema is defined in [schemas/report-output.schema.json](/Users/yechankun/Code/bots/financial-bot/schemas/report-output.schema.json).
+- If you want more user-facing skills later, add them to [config/skills.json](/Users/yechankun/Code/bots/financial-bot/config/skills.json) with `enabled: true`, then restart the bot so the slash-command choices refresh.
+- Full terms of service draft is in [docs/terms-clause-ko.md](/Users/yechankun/Code/bots/financial-bot/docs/terms-clause-ko.md).
+- Full privacy policy draft is in [docs/privacy-policy-ko.md](/Users/yechankun/Code/bots/financial-bot/docs/privacy-policy-ko.md).
+- Report-writing compliance guidance is in [docs/report-compliance-guidelines.md](/Users/yechankun/Code/bots/financial-bot/docs/report-compliance-guidelines.md).
