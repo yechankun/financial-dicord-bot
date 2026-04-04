@@ -1,6 +1,6 @@
-import { startDiscordBot } from "./discordBot.js";
+import { startRuntime } from "./startRuntime.js";
 
-startDiscordBot().catch((error) => {
+startRuntime().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });

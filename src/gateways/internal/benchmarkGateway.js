@@ -6,6 +6,10 @@ import { internalBenchmarkQueue, internalBenchmarkStore } from "./provider.js";
 import { runBenchmarkPlanningStage } from "./reportGateway.js";
 
 async function updateBenchmarkDiscordMessage(client, item, benchmarkMessage) {
+  if (!client) {
+    return;
+  }
+
   if (
     !item.reportMessageChannelId ||
     !item.reportMessageId ||
@@ -84,7 +88,7 @@ export async function loadReportBenchmarkContext() {
   };
 }
 
-export function createBenchmarkQueueConsumer(client) {
+export function createBenchmarkQueueConsumer(client = null) {
   return async function consumeBenchmarkQueueBatch(batchItems) {
     for (const item of batchItems) {
       try {

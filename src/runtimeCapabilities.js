@@ -77,6 +77,10 @@ export function getCapabilityStatus() {
     shouldStartDiscordIngress: shouldStartDiscordIngress(),
     canHandleLookupCommands: canHandleLookupCommands(),
     canHandleReportCommands: canHandleReportCommands(),
+    runsBackgroundRuntime:
+      hasCapability("report-worker") ||
+      hasCapability("collector") ||
+      hasCapability("ai-trading"),
   };
 }
 
