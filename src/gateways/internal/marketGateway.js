@@ -14,6 +14,26 @@ export async function fetchEtfScreen({
   });
 }
 
+export async function fetchStockScreen({
+  category,
+  limit,
+  criteria,
+  industryHighlights,
+  industries,
+  perIndustryLimit,
+  maxIndustries,
+}) {
+  return internalMarketStorage.buildStockScreenMessage({
+    category,
+    limit,
+    criteria,
+    industryHighlights,
+    industries,
+    perIndustryLimit,
+    maxIndustries,
+  });
+}
+
 export async function fetchEtfLookup({ symbol }) {
   return internalMarketStorage.buildEtfLookupMessage(symbol);
 }

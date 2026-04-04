@@ -3,6 +3,7 @@ import {
   loadEtfScreenPreferenceUsecase,
   runEtfLookup,
   runEtfScreen,
+  runStockScreen,
   runStockLookup,
   saveEtfScreenPreferenceUsecase,
 } from "../../../usecases/marketCommands.js";
@@ -88,6 +89,33 @@ export async function handleEtfLookupCommand(interaction) {
   const symbol = interaction.options.getString("symbol", true);
   await interaction.reply(
     buildVisibilityReplyOptions(interaction, await runEtfLookup({ symbol })),
+  );
+}
+
+export async function handleStockScreenCommand(interaction) {
+  const category = interaction.options.getString("category", true);
+  const limit = interaction.options.getInteger("limit") || 5;
+  const criteria = interaction.options.getString("criteria") || "";
+  const industryHighlights =
+    interaction.options.getBoolean("industry_highlights") || false;
+  const industries = interaction.options.getString("industries") || "";
+  const perIndustryLimit =
+    interaction.options.getInteger("per_industry_limit") || 2;
+  const maxIndustries = interaction.options.getInteger("max_industries") || 5;
+
+  await interaction.reply(
+    buildVisibilityReplyOptions(
+      interaction,
+      await runStockScreen({
+        category,
+        limit,
+        criteria,
+        industryHighlights,
+        industries,
+        perIndustryLimit,
+        maxIndustries,
+      }),
+    ),
   );
 }
 

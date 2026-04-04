@@ -8,6 +8,7 @@ import {
   buildEtfScreenCommandJson,
   buildEtfScreenPrefCommandJson,
   buildEtfScreenSaveCommandJson,
+  buildStockScreenCommandJson,
   buildStockLookupCommandJson,
 } from "./marketCommands.js";
 import { buildReportCommandJson } from "./reportCommand.js";
@@ -25,6 +26,7 @@ export function buildCommandJson(activeSkills, { internalCommandsEnabled }) {
     buildEtfScreenSaveCommandJson(),
     buildEtfScreenPrefCommandJson(),
     buildEtfLookupCommandJson(),
+    buildStockScreenCommandJson(),
     buildStockLookupCommandJson(),
     buildReportCommandJson(activeSkills),
     buildBenchmarkCommandJson(),

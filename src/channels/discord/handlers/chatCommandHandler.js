@@ -14,6 +14,7 @@ import {
   handleEtfScreenCommand,
   handleEtfScreenPrefCommand,
   handleEtfScreenSaveCommand,
+  handleStockScreenCommand,
   handleStockLookupCommand,
 } from "./handleMarketCommands.js";
 import { handleReportCommand } from "./handleReportCommand.js";
@@ -131,6 +132,11 @@ export function createChatCommandHandler({
 
       if (interaction.commandName === "etf") {
         await handleEtfLookupCommand(interaction);
+        return;
+      }
+
+      if (interaction.commandName === "stockscreen") {
+        await handleStockScreenCommand(interaction);
         return;
       }
 

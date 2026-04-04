@@ -2,6 +2,7 @@ import {
   fetchEtfLookup,
   fetchEtfScreen,
   fetchEtfScreenPreference,
+  fetchStockScreen,
   fetchStockLookup,
   putEtfScreenPreference,
   removeEtfScreenPreference,
@@ -18,6 +19,26 @@ export async function runEtfScreen({ category, limit, criteria, discordUserId })
 
 export async function runEtfLookup({ symbol }) {
   return fetchEtfLookup({ symbol });
+}
+
+export async function runStockScreen({
+  category,
+  limit,
+  criteria,
+  industryHighlights,
+  industries,
+  perIndustryLimit,
+  maxIndustries,
+}) {
+  return fetchStockScreen({
+    category,
+    limit,
+    criteria,
+    industryHighlights,
+    industries,
+    perIndustryLimit,
+    maxIndustries,
+  });
 }
 
 export async function runStockLookup({ symbol }) {
