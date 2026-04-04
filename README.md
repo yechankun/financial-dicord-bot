@@ -52,10 +52,23 @@ This keeps skill activation as a file-based admin action instead of a Discord co
    - Optional: `BENCHMARK_SELL_FEE_RATE`
    - Optional: `ALLOWED_DISCORD_USER_IDS`
 3. Make sure `research-runtime` CLI is installed and available in `PATH`, or set `AI_RUNTIME_BIN`.
-4. Start the bot.
+4. Check the internal runtime link when needed.
+   ```bash
+   npm run provider:status
+   ```
+5. Start the bot.
    ```bash
    npm start
    ```
+
+## Runtime modes
+
+- Default: `INTERNAL_PROVIDER_MODE=auto`
+  - installed private package 우선
+  - 없으면 sibling package fallback
+  - 둘 다 없으면 public-only 동작
+- Force package: `INTERNAL_PROVIDER_MODE=package`
+- Public-only: `INTERNAL_PROVIDER_MODE=disabled`
 
 ## Command
 
