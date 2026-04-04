@@ -7,3 +7,7 @@ export async function fetchReportAccessStatus({ discordUserId }) {
 export async function grantReportAccess({ discordUserId }) {
   return internalAppStorage.authorizeReportAccess({ discordUserId });
 }
+
+export async function consumeCommandRateLimit({ discordUserId, command }) {
+  return internalAppStorage.consumeCommandRateLimit({ discordUserId, command });
+}

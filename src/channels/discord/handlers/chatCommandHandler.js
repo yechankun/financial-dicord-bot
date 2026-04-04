@@ -2,6 +2,9 @@ import { ChannelType, MessageFlags } from "discord.js";
 
 import { config } from "../../../config.js";
 import {
+  consumeCommandRateLimit,
+} from "../../../gateways/internal/appGateway.js";
+import {
   getInternalUnavailableMessage,
   hasInternalProvider,
 } from "../../../gateways/internal/provider.js";
@@ -37,6 +40,25 @@ function isGuildTextLikeChannel(channel) {
 
 function requiresInternalProvider(commandName) {
   return commandName !== "skills";
+}
+
+function shouldConsumeRateLimit(commandName) {
+  return commandName !== "skills";
+}
+
+async function enforceRateLimit(interaction) {
+  const result = await consumeCommandRateLimit({
+    discordUserId: interaction.user.id,
+    command: interaction.commandName,
+  });
+
+  if (result.allowed) {
+    return;
+  }
+
+  const retryAfter = Number(result.retry_after_seconds || 0);
+  const retrySuffix = retryAfter > 0 ? ` 약 ${retryAfter}초 뒤에 다시 시도해달라냥.` : "";
+  throw new Error(`${result.reason || "요청이 너무 많다냥."}${retrySuffix}`);
 }
 
 export function createChatCommandHandler({
@@ -81,6 +103,10 @@ export function createChatCommandHandler({
       if (interaction.commandName === "skills") {
         await handleSkillsCommand(interaction);
         return;
+      }
+
+      if (shouldConsumeRateLimit(interaction.commandName)) {
+        await enforceRateLimit(interaction);
       }
 
       if (interaction.commandName === "benchmark") {
