@@ -8,6 +8,11 @@ import {
   getInternalUnavailableMessage,
   hasInternalProvider,
 } from "../../../gateways/internal/provider.js";
+import {
+  buildMissingCapabilityMessage,
+  getRequiredCapabilityForCommand,
+  hasCapability,
+} from "../../../runtimeCapabilities.js";
 import { handleBenchmarkCommand } from "./handleBenchmarkCommand.js";
 import {
   handleEtfLookupCommand,
@@ -41,6 +46,17 @@ function isGuildTextLikeChannel(channel) {
 
 function requiresInternalProvider(commandName) {
   return commandName !== "skills";
+}
+
+function ensureCommandCapability(commandName) {
+  const capability = getRequiredCapabilityForCommand(commandName);
+  if (!capability) {
+    return;
+  }
+
+  if (!hasCapability(capability)) {
+    throw new Error(buildMissingCapabilityMessage(commandName));
+  }
 }
 
 function shouldConsumeRateLimit(commandName) {
@@ -105,6 +121,8 @@ export function createChatCommandHandler({
         await handleSkillsCommand(interaction);
         return;
       }
+
+      ensureCommandCapability(interaction.commandName);
 
       if (shouldConsumeRateLimit(interaction.commandName)) {
         await enforceRateLimit(interaction);

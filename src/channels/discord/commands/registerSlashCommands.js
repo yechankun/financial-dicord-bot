@@ -1,6 +1,10 @@
 import { REST, Routes } from "discord.js";
 
 import { config } from "../../../config.js";
+import {
+  canHandleLookupCommands,
+  canHandleReportCommands,
+} from "../../../runtimeCapabilities.js";
 import { loadActiveSkills } from "../../../skillWhitelist.js";
 import { buildBenchmarkCommandJson } from "./benchmarkCommand.js";
 import {
@@ -21,16 +25,23 @@ export function buildCommandJson(activeSkills, { internalCommandsEnabled }) {
     return commands;
   }
 
-  return commands.concat([
-    buildEtfScreenCommandJson(),
-    buildEtfScreenSaveCommandJson(),
-    buildEtfScreenPrefCommandJson(),
-    buildEtfLookupCommandJson(),
-    buildStockScreenCommandJson(),
-    buildStockLookupCommandJson(),
-    buildReportCommandJson(activeSkills),
-    buildBenchmarkCommandJson(),
-  ]);
+  if (canHandleLookupCommands()) {
+    commands.push(
+      buildEtfScreenCommandJson(),
+      buildEtfScreenSaveCommandJson(),
+      buildEtfScreenPrefCommandJson(),
+      buildEtfLookupCommandJson(),
+      buildStockScreenCommandJson(),
+      buildStockLookupCommandJson(),
+      buildBenchmarkCommandJson(),
+    );
+  }
+
+  if (canHandleReportCommands()) {
+    commands.push(buildReportCommandJson(activeSkills));
+  }
+
+  return commands;
 }
 
 export async function registerSlashCommands({ internalCommandsEnabled = true } = {}) {

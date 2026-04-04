@@ -1,7 +1,13 @@
 import { fetchSymbolAutocomplete } from "../../../gateways/internal/marketGateway.js";
+import { canHandleLookupCommands } from "../../../runtimeCapabilities.js";
 
 export async function handleAutocompleteInteraction(interaction) {
   try {
+    if (!canHandleLookupCommands()) {
+      await interaction.respond([]);
+      return;
+    }
+
     if (interaction.commandName === "etf") {
       const focused = interaction.options.getFocused(true);
       const choices = await fetchSymbolAutocomplete({

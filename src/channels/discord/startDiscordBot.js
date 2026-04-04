@@ -17,17 +17,35 @@ import {
   getInternalProviderStatus,
   hasInternalProvider,
 } from "../../gateways/internal/provider.js";
+import {
+  hasCapability,
+  shouldStartDiscordIngress,
+} from "../../runtimeCapabilities.js";
 import { registerSlashCommands } from "./commands/registerSlashCommands.js";
 import { createInteractionHandler } from "./handlers/createInteractionHandler.js";
 
 export async function startDiscordBot() {
+  if (!shouldStartDiscordIngress()) {
+    console.log(
+      "discord-ingress capability is disabled. Skipping Discord login for this process.",
+    );
+    return;
+  }
+
   const internalAvailable = hasInternalProvider();
   const providerStatus = getInternalProviderStatus();
+  const benchmarkRuntimeEnabled =
+    internalAvailable &&
+    (hasCapability("lookup-commands") || hasCapability("ai-trading"));
+  const chartRuntimeEnabled =
+    internalAvailable && hasCapability("report-worker");
 
   await fs.mkdir(config.runsDir, { recursive: true });
   await fs.mkdir(config.channelLocksDir, { recursive: true });
-  if (internalAvailable) {
+  if (benchmarkRuntimeEnabled) {
     await ensureBenchmarkRuntime();
+  }
+  if (chartRuntimeEnabled) {
     await ensureChartRuntime();
   }
   await registerSlashCommands({ internalCommandsEnabled: internalAvailable });
@@ -37,10 +55,10 @@ export async function startDiscordBot() {
   });
 
   const activeChannelRuns = new Map();
-  const consumeBenchmarkQueueBatch = internalAvailable
+  const consumeBenchmarkQueueBatch = benchmarkRuntimeEnabled
     ? createBenchmarkQueueConsumer(client)
     : async () => {};
-  const consumeChartQueueBatch = internalAvailable
+  const consumeChartQueueBatch = chartRuntimeEnabled
     ? createChartQueueConsumer()
     : async () => {};
   const handleInteraction = createInteractionHandler({
@@ -58,12 +76,16 @@ export async function startDiscordBot() {
       return;
     }
 
-    void drainPendingChartQueue(consumeChartQueueBatch).catch((error) => {
-      console.error("Failed to drain chart queue on startup:", error);
-    });
-    void drainPendingBenchmarkQueue(consumeBenchmarkQueueBatch).catch((error) => {
-      console.error("Failed to drain benchmark queue on startup:", error);
-    });
+    if (chartRuntimeEnabled) {
+      void drainPendingChartQueue(consumeChartQueueBatch).catch((error) => {
+        console.error("Failed to drain chart queue on startup:", error);
+      });
+    }
+    if (benchmarkRuntimeEnabled) {
+      void drainPendingBenchmarkQueue(consumeBenchmarkQueueBatch).catch((error) => {
+        console.error("Failed to drain benchmark queue on startup:", error);
+      });
+    }
   });
 
   client.on("interactionCreate", handleInteraction);
