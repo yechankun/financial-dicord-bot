@@ -8,6 +8,18 @@ export async function grantReportAccess({ discordUserId }) {
   return internalAppStorage.authorizeReportAccess({ discordUserId });
 }
 
+export async function fetchScreenPreference({ discordUserId, category }) {
+  return internalAppStorage.loadScreenPreference({ discordUserId, category });
+}
+
+export async function putScreenPreference({ discordUserId, category, criteria }) {
+  return internalAppStorage.saveScreenPreference({ discordUserId, category, criteria });
+}
+
+export async function removeScreenPreference({ discordUserId, category }) {
+  return internalAppStorage.deleteScreenPreference({ discordUserId, category });
+}
+
 export async function consumeCommandRateLimit({ discordUserId, command }) {
   return internalAppStorage.consumeCommandRateLimit({ discordUserId, command });
 }

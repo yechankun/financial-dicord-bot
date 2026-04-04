@@ -1,19 +1,35 @@
 import {
   fetchEtfLookup,
   fetchEtfScreen,
-  fetchEtfScreenPreference,
   fetchStockScreen,
   fetchStockLookup,
-  putEtfScreenPreference,
-  removeEtfScreenPreference,
 } from "../gateways/internal/marketGateway.js";
+import {
+  fetchScreenPreference,
+  putScreenPreference,
+  removeScreenPreference,
+} from "../gateways/internal/appGateway.js";
 
 export async function runEtfScreen({ category, limit, criteria, discordUserId }) {
+  let effectiveCriteria = criteria;
+  if (
+    category !== "overview" &&
+    !String(criteria || "").trim() &&
+    String(discordUserId || "").trim()
+  ) {
+    const savedPreference = await fetchScreenPreference({
+      discordUserId,
+      category,
+    });
+    if (savedPreference?.criteria_json) {
+      effectiveCriteria = savedPreference.criteria_json;
+    }
+  }
+
   return fetchEtfScreen({
     category,
     limit,
-    criteria,
-    discordUserId,
+    criteria: effectiveCriteria,
   });
 }
 
@@ -50,7 +66,7 @@ export async function saveEtfScreenPreferenceUsecase({
   category,
   criteria,
 }) {
-  return putEtfScreenPreference({
+  return putScreenPreference({
     discordUserId,
     category,
     criteria,
@@ -61,7 +77,7 @@ export async function loadEtfScreenPreferenceUsecase({
   discordUserId,
   category,
 }) {
-  return fetchEtfScreenPreference({
+  return fetchScreenPreference({
     discordUserId,
     category,
   });
@@ -71,7 +87,7 @@ export async function deleteEtfScreenPreferenceUsecase({
   discordUserId,
   category,
 }) {
-  return removeEtfScreenPreference({
+  return removeScreenPreference({
     discordUserId,
     category,
   });
