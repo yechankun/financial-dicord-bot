@@ -12,6 +12,35 @@ export function assertRunScopedAbsolutePath(runDir, filePath) {
   }
 }
 
+export function toRunRelativePath(runDir, filePath) {
+  assertRunScopedAbsolutePath(runDir, filePath);
+  return path.relative(runDir, filePath);
+}
+
+export function serializeReportArtifacts(runDir, report) {
+  return {
+    ...report,
+    html_path: toRunRelativePath(runDir, report.html_path),
+    png_paths: (report.png_paths || []).map((item) =>
+      toRunRelativePath(runDir, item),
+    ),
+    supporting_paths: (report.supporting_paths || []).map((item) =>
+      toRunRelativePath(runDir, item),
+    ),
+  };
+}
+
+export function materializeReportArtifacts(runDir, report) {
+  return {
+    ...report,
+    html_path: path.join(runDir, report.html_path),
+    png_paths: (report.png_paths || []).map((item) => path.join(runDir, item)),
+    supporting_paths: (report.supporting_paths || []).map((item) =>
+      path.join(runDir, item),
+    ),
+  };
+}
+
 export async function validateReportArtifacts(runDir, report) {
   const candidates = [
     report.html_path,

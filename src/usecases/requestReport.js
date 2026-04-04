@@ -36,10 +36,106 @@ import {
 import {
   buildResearchArtifactPaths,
   ensureArtifactParentDirs,
+  materializeReportArtifacts,
   resolveResearchMarkdown,
   validateArtifactPathsExist,
   validateReportArtifacts,
 } from "../shared/reportArtifacts.js";
+import { hasCapability } from "../runtimeCapabilities.js";
+import { enqueueReportJob, waitForReportJobResult } from "../reportJobQueue.js";
+
+async function waitForMaterializedReportArtifacts(runDir, report, timeoutMs = 60_000) {
+  const startedAt = Date.now();
+  let lastError = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      await validateReportArtifacts(runDir, report);
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  throw lastError || new Error("리포트 산출물이 제때 동기화되지 않았다냥.");
+}
+
+async function handleDispatchedReport({
+  interaction,
+  skill,
+  question,
+  startedAt,
+}) {
+  const { runId, runDir } = createReportRun(skill.name);
+
+  await interaction.editReply({
+    content:
+      "리포트 작업을 worker에 전달했다냥. 결과를 기다리고 있다냥.",
+  });
+
+  const queueItem = await enqueueReportJob({
+    runId,
+    skillName: skill.name,
+    question,
+  });
+  const result = await waitForReportJobResult(queueItem.queueId, 14 * 60 * 1000);
+
+  if (!result) {
+    await interaction.editReply({
+      content:
+        "리포트 작업이 아직 끝나지 않았다냥. worker에서 계속 처리 중이지만 자동 후속 게시까지는 아직 연결되지 않았다냥.",
+    });
+    return;
+  }
+
+  if (result.status === "rejected") {
+    await interaction.editReply({
+      content: toNyangSentence(
+        result.reason,
+        "이 질문은 사전 검사에서 통과하지 못했다냥.",
+      ),
+    });
+    return;
+  }
+
+  if (result.status !== "ok") {
+    throw new Error(result.error || "worker 리포트 실행에 실패했다냥.");
+  }
+
+  const accessGrant = await grantReportAccess({
+    discordUserId: interaction.user.id,
+  });
+  if (!accessGrant.allowed) {
+    await interaction.editReply({
+      content: accessGrant.reason || "현재 `/report`를 사용할 수 없다냥.",
+    });
+    return;
+  }
+
+  const materializedReport = materializeReportArtifacts(runDir, result.report);
+  await waitForMaterializedReportArtifacts(runDir, materializedReport);
+
+  const attachments = await loadAttachments(materializedReport.png_paths);
+  const finalMessageBase = [
+    `리포트 완성이다냥! (${skill.name}, 소요시간: ${formatElapsedDuration(startedAt)})`,
+    buildMetricsLine(result.metrics || {}),
+  ].join("\n");
+  const finalMessage = result.benchmark?.message
+    ? [finalMessageBase, result.benchmark.message].join("\n")
+    : finalMessageBase;
+
+  await interaction.editReply({
+    content:
+      accessGrant.access_type === "free_once_consumed"
+        ? [
+            "무료 `/report` 1회를 사용했다냥.",
+            finalMessage,
+          ].join("\n")
+        : finalMessage,
+    files: attachments,
+  });
+}
 
 export async function requestReport({
   interaction,
@@ -91,8 +187,18 @@ export async function requestReport({
     });
 
     await interaction.deferReply();
-
     const startedAt = Date.now();
+
+    if (!hasCapability("report-worker")) {
+      await handleDispatchedReport({
+        interaction,
+        skill,
+        question,
+        startedAt,
+      });
+      return;
+    }
+
     const { runDir } = createReportRun(skill.name);
     const artifactPaths = buildResearchArtifactPaths(runDir);
     const guardJob = await runGuardStage({

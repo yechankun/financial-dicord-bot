@@ -71,12 +71,17 @@ export function canHandleReportCommands() {
   return hasCapability("report-worker");
 }
 
+export function canAcceptReportCommands() {
+  return hasCapability("discord-ingress") || hasCapability("report-worker");
+}
+
 export function getCapabilityStatus() {
   return {
     capabilities: getRuntimeCapabilities(),
     shouldStartDiscordIngress: shouldStartDiscordIngress(),
     canHandleLookupCommands: canHandleLookupCommands(),
     canHandleReportCommands: canHandleReportCommands(),
+    canAcceptReportCommands: canAcceptReportCommands(),
     runsBackgroundRuntime:
       hasCapability("report-worker") ||
       hasCapability("collector") ||
@@ -102,7 +107,7 @@ export function getRequiredCapabilityForCommand(commandName) {
   }
 
   if (commandName === "report") {
-    return "report-worker";
+    return canAcceptReportCommands() ? "" : "report-worker";
   }
 
   return "";

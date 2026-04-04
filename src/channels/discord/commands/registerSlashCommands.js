@@ -2,8 +2,8 @@ import { REST, Routes } from "discord.js";
 
 import { config } from "../../../config.js";
 import {
+  canAcceptReportCommands,
   canHandleLookupCommands,
-  canHandleReportCommands,
 } from "../../../runtimeCapabilities.js";
 import { loadActiveSkills } from "../../../skillWhitelist.js";
 import { buildBenchmarkCommandJson } from "./benchmarkCommand.js";
@@ -37,7 +37,7 @@ export function buildCommandJson(activeSkills, { internalCommandsEnabled }) {
     );
   }
 
-  if (canHandleReportCommands()) {
+  if (canAcceptReportCommands()) {
     commands.push(buildReportCommandJson(activeSkills));
   }
 

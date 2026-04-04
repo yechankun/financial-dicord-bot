@@ -18,6 +18,11 @@ import {
   hasCapability,
   shouldStartDiscordIngress,
 } from "./runtimeCapabilities.js";
+import {
+  drainReportJobQueue,
+  ensureReportJobQueueDirs,
+} from "./reportJobQueue.js";
+import { createReportJobConsumer } from "./usecases/processReportJobs.js";
 
 function logCapabilityStatus() {
   const status = getCapabilityStatus();
@@ -43,14 +48,19 @@ export async function startRuntime() {
   }
 
   const chartWorkerEnabled = hasCapability("report-worker");
-  const benchmarkWorkerEnabled = hasCapability("ai-trading");
+  const reportWorkerEnabled = hasCapability("report-worker");
+  const benchmarkWorkerEnabled =
+    hasCapability("ai-trading") || hasCapability("report-worker");
   const collectorEnabled = hasCapability("collector");
 
-  if (!chartWorkerEnabled && !benchmarkWorkerEnabled && !collectorEnabled) {
+  if (!chartWorkerEnabled && !reportWorkerEnabled && !benchmarkWorkerEnabled && !collectorEnabled) {
     console.log("No background capabilities enabled. Exiting runtime.");
     return;
   }
 
+  if (reportWorkerEnabled) {
+    await ensureReportJobQueueDirs();
+  }
   if (chartWorkerEnabled) {
     await ensureChartRuntime();
   }
@@ -70,8 +80,17 @@ export async function startRuntime() {
   const consumeBenchmarkQueueBatch = benchmarkWorkerEnabled
     ? createBenchmarkQueueConsumer()
     : async () => {};
+  const consumeReportJobBatch = reportWorkerEnabled
+    ? createReportJobConsumer({
+        consumeChartQueueBatch,
+        consumeBenchmarkQueueBatch,
+      })
+    : async () => {};
 
   const drainQueues = async () => {
+    if (reportWorkerEnabled) {
+      await drainReportJobQueue(consumeReportJobBatch);
+    }
     if (chartWorkerEnabled) {
       await drainPendingChartQueue(consumeChartQueueBatch);
     }
