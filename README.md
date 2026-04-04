@@ -35,6 +35,8 @@ This keeps skill activation as a file-based admin action instead of a Discord co
    ```bash
    npm install
    ```
+   - If the server or local machine has GitHub SSH access, `financial-bot-internal` installs automatically as an optional private dependency.
+   - If private dependency install is unavailable, the public repo still installs and can run in public-only mode.
 2. Copy `.env.example` to `.env` and fill:
    - `DISCORD_BOT_TOKEN`
    - `DISCORD_APPLICATION_ID`
